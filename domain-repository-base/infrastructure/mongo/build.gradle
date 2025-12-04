@@ -1,4 +1,5 @@
 plugins {
+    id 'java-library'
     id 'org.springframework.boot'
     id 'io.spring.dependency-management'
     id 'maven-publish'
@@ -17,14 +18,15 @@ repositories {
     mavenCentral()
 }
 dependencies {
-    implementation project(":domain")
-    implementation ("org.springframework.boot:spring-boot-starter-data-mongodb:")
+    api project(":domain")
+    implementation ("org.springframework.boot:spring-boot-starter-data-mongodb")
     compileOnly "org.projectlombok:lombok"
     annotationProcessor "org.projectlombok:lombok"
 }
 publishing {
     publications {
         create("mavenJava", MavenPublication) {
+            artifactId = 'domain-repository-mongo'
             from components.java
         }
     }

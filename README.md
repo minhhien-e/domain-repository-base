@@ -8,43 +8,68 @@ Dự án này giúp đơn giản hóa việc triển khai pattern Repository tro
 
 ## Các Module
 
-Dự án được chia thành hai module chính:
+Dự án được chia thành hai module chính, có thể sử dụng độc lập tùy theo nhu cầu:
 
-### 1. Domain (`:domain`)
-Chứa các trừu tượng cốt lõi và các lớp cơ sở cho tầng domain.
-- **Base Interfaces**: `DomainEntityRepository` cho các thao tác repository chung.
-- **Dirty Tracking**: Cơ chế theo dõi thay đổi của entity (`Trackable`, `DirtyTracking`, `NestedDirtyTracking`), cho phép cập nhật tối ưu.
-- **Base Classes**: Nền tảng cho Aggregates và Entities.
+### 1. Domain Core (`:domain`)
+- **Artifact ID**: `domain-repository-core`
+- **Mô tả**: Chứa các interface và base class thuần túy cho Domain layer. Không phụ thuộc vào framework hạ tầng nào.
+- **Thành phần**:
+    - `DomainEntityRepository`: Interface gốc.
+    - `Trackable`, `DirtyTracking`: Cơ chế theo dõi thay đổi.
+    - Base classes cho Aggregate và Entity.
 
-### 2. Infrastructure (`:infrastructure:mongo`)
-Cung cấp triển khai MongoDB cho các domain repository.
-- **Abstract Implementations**: `AbstractAggregateMongoRepository` và `AbstractEntityMongoRepository` giúp giảm thiểu code lặp lại khi triển khai repository với MongoDB.
-
-## Tính năng
-
-- **Hỗ trợ DDD**: Được thiết kế riêng cho việc quản lý Aggregate và Entity.
-- **Dirty Tracking**: Cập nhật hiệu quả chỉ những trường thay đổi vào MongoDB.
-- **Thiết kế Module**: Tách biệt rõ ràng giữa hợp đồng domain và logic hạ tầng.
+### 2. Infrastructure Mongo (`:infrastructure:mongo`)
+- **Artifact ID**: `domain-repository-mongo`
+- **Mô tả**: Triển khai MongoDB cho các repository.
+- **Dependency**: Tự động bao gồm `domain-repository-core`.
+- **Thành phần**:
+    - `AbstractAggregateMongoRepository`: Base class cho Aggregate Repository.
+    - `AbstractEntityMongoRepository`: Base class cho Entity Repository.
 
 ## Hướng dẫn sử dụng
 
-### Tầng Domain
-Định nghĩa interface repository của bạn kế thừa từ `DomainEntityRepository`:
+### Cách 1: Sử dụng trọn bộ (Khuyên dùng cho module Infrastructure)
+Nếu bạn đang cài đặt tầng hạ tầng (Infrastructure Layer), hãy import module mongo. Nó sẽ tự động kéo theo module core.
+
+```groovy
+implementation 'com.github.minhhien-e:domain-repository-base:domain-repository-mongo:1.0.0'
+```
+
+### Cách 2: Sử dụng riêng Domain Core (Khuyên dùng cho module Domain)
+Nếu bạn đang viết code trong tầng Domain và muốn giữ nó sạch (không phụ thuộc vào Spring hay Mongo), chỉ import module core:
+
+```groovy
+implementation 'com.github.minhhien-e:domain-repository-base:domain-repository-core:1.0.0'
+```
+
+### Ví dụ triển khai
+
+#### 1. Tại Domain Layer (chỉ phụ thuộc `domain-repository-core`)
 ```java
 public interface MyAggregateRepository extends DomainEntityRepository<MyAggregate> {
-    // Các phương thức query tùy chỉnh
+    // Các phương thức query nghiệp vụ
+    List<MyAggregate> findByStatus(String status);
 }
 ```
 
-### Tầng Infrastructure
-Triển khai repository của bạn kế thừa từ abstract Mongo repository:
+#### 2. Tại Infrastructure Layer (phụ thuộc `domain-repository-mongo`)
 ```java
 @Repository
 public class MyAggregateMongoRepository extends AbstractAggregateMongoRepository<MyAggregate, MyMongoDocument> implements MyAggregateRepository {
-    // Chi tiết triển khai
+    
+    public MyAggregateMongoRepository(MongoTemplate mongoTemplate) {
+        super(mongoTemplate);
+    }
+
+    @Override
+    protected Class<?> getChildEntityClass(AggregateChild child) {
+        // Mapping logic
+    }
+    
+    // Triển khai các query method
 }
 ```
 
 ## Yêu cầu
 - Java 17
-- Spring Boot 3.5.3
+- Spring Boot 3.5.3 (cho module infrastructure)

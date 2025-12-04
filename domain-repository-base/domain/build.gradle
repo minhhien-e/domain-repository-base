@@ -1,5 +1,5 @@
 plugins {
-    id 'java'
+    id 'java-library'
     id 'maven-publish'
 }
 
@@ -13,6 +13,7 @@ repositories {
 publishing {
     publications {
         create("mavenJava", MavenPublication) {
+            artifactId = 'domain-repository-core'
             from components.java
         }
     }
