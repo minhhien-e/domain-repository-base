@@ -1,75 +1,105 @@
 # Domain Repository Base
 
-Thư viện cung cấp các lớp cơ sở (base classes) và giao diện (interfaces) để triển khai các Repository theo mô hình Domain-Driven Design (DDD), hỗ trợ đặc biệt cho hạ tầng MongoDB.
+Thư viện cung cấp các lớp cơ sở (base classes) và giao diện (interfaces) để triển khai Repository theo mô hình **Domain-Driven Design (DDD)**, hỗ trợ tách biệt hoàn toàn giữa Domain và Infrastructure.
 
-## Tổng quan
+---
 
-Dự án này giúp đơn giản hóa việc triển khai pattern Repository trong các ứng dụng DDD. Nó tách biệt các định nghĩa domain khỏi việc triển khai hạ tầng, giúp kiến trúc sạch sẽ và dễ bảo trì hơn.
+## 📦 Cài Đặt
 
-## Các Module
+Thư viện được chia thành 2 module chính. Tùy thuộc vào layer bạn đang làm việc, hãy chọn dependency phù hợp.
 
-Dự án được chia thành hai module chính, có thể sử dụng độc lập tùy theo nhu cầu:
-
-### 1. Domain Core (`:domain`)
-- **Artifact ID**: `domain-repository-core`
-- **Mô tả**: Chứa các interface và base class thuần túy cho Domain layer. Không phụ thuộc vào framework hạ tầng nào.
-- **Thành phần**:
-    - `DomainEntityRepository`: Interface gốc.
-    - `Trackable`, `DirtyTracking`: Cơ chế theo dõi thay đổi.
-    - Base classes cho Aggregate và Entity.
-
-### 2. Infrastructure Mongo (`:infrastructure:mongo`)
-- **Artifact ID**: `domain-repository-mongo`
-- **Mô tả**: Triển khai MongoDB cho các repository.
-- **Dependency**: Tự động bao gồm `domain-repository-core`.
-- **Thành phần**:
-    - `AbstractAggregateMongoRepository`: Base class cho Aggregate Repository.
-    - `AbstractEntityMongoRepository`: Base class cho Entity Repository.
-
-## Hướng dẫn sử dụng
-
-### Cách 1: Sử dụng trọn bộ (Khuyên dùng cho module Infrastructure)
-Nếu bạn đang cài đặt tầng hạ tầng (Infrastructure Layer), hãy import module mongo. Nó sẽ tự động kéo theo module core.
-
-```groovy
-implementation 'com.github.minhhien-e:domain-repository-base:domain-repository-mongo:1.0.0'
-```
-
-### Cách 2: Sử dụng riêng Domain Core (Khuyên dùng cho module Domain)
-Nếu bạn đang viết code trong tầng Domain và muốn giữ nó sạch (không phụ thuộc vào Spring hay Mongo), chỉ import module core:
+### 1. Domain Layer (`:domain-core`)
+Dùng cho các module chứa nghiệp vụ cốt lõi (Domain), nơi bạn **định nghĩa** các Entity và Repository Interface. Module này **không** phụ thuộc vào Spring hay MongoDB.
 
 ```groovy
 implementation 'com.github.minhhien-e:domain-repository-base:domain-repository-core:1.0.0'
 ```
 
-### Ví dụ triển khai
+### 2. Infrastructure Layer (`:domain-repository-mongo`)
+Dùng cho các module triển khai hạ tầng (Infrastructure), nơi bạn **thực thi** các Repository Interface bằng MongoDB. Module này đã bao gồm `:domain-core`.
 
-#### 1. Tại Domain Layer (chỉ phụ thuộc `domain-repository-core`)
+```groovy
+implementation 'com.github.minhhien-e:domain-repository-base:domain-repository-mongo:1.0.0'
+```
+
+---
+
+## 🛠 Chức năng: Mô hình hóa Domain (Domain Modeling)
+
+Phần này hướng dẫn cách sử dụng `:domain-core` để xây dựng các Aggregate và Entity.
+
+### 1. Định nghĩa Aggregate Root
+Kế thừa lớp `Aggregate` để tạo một Aggregate Root. Lớp này hỗ trợ cơ chế **Dirty Tracking** để tối ưu hóa việc lưu trữ (chỉ lưu các trường thay đổi).
+
 ```java
-public interface MyAggregateRepository extends DomainEntityRepository<MyAggregate> {
-    // Các phương thức query nghiệp vụ
-    List<MyAggregate> findByStatus(String status);
+public class Order extends Aggregate<String> {
+    public Order(String id) {
+        super(id);
+    }
+    
+    // Các logic nghiệp vụ...
 }
 ```
 
-#### 2. Tại Infrastructure Layer (phụ thuộc `domain-repository-mongo`)
+### 2. Định nghĩa Repository Interface
+Tạo interface cho repository trong Domain layer, kế thừa `DomainEntityRepository`.
+
+```java
+public interface OrderRepository extends DomainEntityRepository<String, Order> {
+    List<Order> findByStatus(String status);
+}
+```
+
+### 3. Cơ chế Dirty Tracking
+Mọi thay đổi trên Aggregate đều nên được theo dõi để tối ưu hiệu năng khi persistence.
+- **Trackable**: Interface đánh dấu khả năng theo dõi.
+- **DirtyTracking**: Class hỗ trợ đánh dấu các field bị thay đổi.
+
+---
+
+## ⚙️ Chức năng: Triển khai Hạ tầng (Infrastructure)
+
+Phần này hướng dẫn cách sử dụng `:domain-repository-mongo` để implement các interface đã định nghĩa ở trên.
+
+### 1. Cấu hình
+Yêu cầu hệ thống:
+- Java 17+
+- Spring Boot 3.5.3+
+
+### 2. Implement Repository
+Sử dụng `AbstractAggregateMongoRepository` để triển khai repository thật.
+
 ```java
 @Repository
-public class MyAggregateMongoRepository extends AbstractAggregateMongoRepository<MyAggregate, MyMongoDocument> implements MyAggregateRepository {
-    
-    public MyAggregateMongoRepository(MongoTemplate mongoTemplate) {
+public class OrderMongoRepository extends AbstractAggregateMongoRepository<Order, OrderDocument> implements OrderRepository {
+
+    public OrderMongoRepository(MongoTemplate mongoTemplate) {
         super(mongoTemplate);
     }
 
     @Override
-    protected Class<?> getChildEntityClass(AggregateChild child) {
-        // Mapping logic
+    protected Class<OrderDocument> getDocumentClass() {
+        return OrderDocument.class;
     }
-    
-    // Triển khai các query method
+
+    // Triển khai các query method bổ sung
+    @Override
+    public List<Order> findByStatus(String status) {
+        // Logic query mongo...
+    }
 }
 ```
 
-## Yêu cầu
-- Java 17
-- Spring Boot 3.5.3 (cho module infrastructure)
+---
+
+## 🚀 Tính năng Nâng cao
+
+### Nested Tracking
+Hỗ trợ theo dõi thay đổi trong các object lồng nhau (Nested Objects) để đảm bảo cập nhật chính xác cả cấu trúc phức tạp.
+- Sử dụng `NestedTrackable` nếu entity con của bạn cần báo cáo thay đổi lên cha.
+
+### Domain Events
+Hỗ trợ `DomainEvent` để phát đi các sự kiện nghiệp vụ từ Aggregate.
+
+---
+
