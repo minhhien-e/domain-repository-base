@@ -1,14 +1,9 @@
 package io.github.domain.aggregate.base;
 
-import io.github.domain.base.DirtyTracking;
-import io.github.domain.base.NestedDirtyTracking;
-import io.github.domain.base.NestedTrackable;
-import io.github.domain.base.Trackable;
+import io.github.domain.base.*;
 import io.github.domain.entity.base.DomainEntity;
 
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 public abstract class AggregateRoot extends DomainEntity implements NestedTrackable {
 
@@ -41,5 +36,20 @@ public abstract class AggregateRoot extends DomainEntity implements NestedTracka
     @Override
     public boolean hasChanges() {
         return super.hasChanges() || nestedTracking.hasChanges();
+    }
+
+    // Domain Events
+    private final List<DomainEvent> domainEvents = new ArrayList<>();
+
+    public void addDomainEvent(DomainEvent event) {
+        domainEvents.add(event);
+    }
+
+    public List<DomainEvent> getDomainEvents() {
+        return List.copyOf(domainEvents);
+    }
+
+    public void clearDomainEvents() {
+        domainEvents.clear();
     }
 }

@@ -2,9 +2,11 @@ package io.github.infrastructure.mongo.repository.base;
 
 import io.github.domain.aggregate.base.AggregateChild;
 import io.github.domain.aggregate.base.AggregateRoot;
+import io.github.domain.base.DomainEvent;
 import io.github.domain.base.Trackable;
 import io.github.domain.entity.base.DomainEntity;
 import io.github.domain.enums.DomainStatus;
+import io.github.infrastructure.mongo.entity.OutboxEntity;
 import io.github.infrastructure.mongo.entity.base.MongoEntity;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
@@ -13,6 +15,7 @@ import org.springframework.data.mongodb.core.query.Update;
 
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 //Tối ưu bulk operation
 public abstract class AbstractAggregateMongoRepository<A extends AggregateRoot, E extends MongoEntity>
@@ -29,6 +32,24 @@ public abstract class AbstractAggregateMongoRepository<A extends AggregateRoot, 
     @Override
     public void save(A aggregate) {
         super.save(aggregate);
+        // Save Outbox
+        var events = aggregate.getDomainEvents();
+        if (events != null && !events.isEmpty()) {
+            for (DomainEvent event : events) {
+                var outboxItem = OutboxEntity.builder()
+                        .id(UUID.randomUUID())
+                        .aggregateType(aggregate.getClass().getSimpleName())
+                        .aggregateId(aggregate.getId().toString())
+                        .type(event.type())
+                        .payload(event)
+                        .status("PENDING")
+                        .build();
+                mongoTemplate.save(outboxItem);
+            }
+            aggregate.clearDomainEvents();
+        }
+
+        // Save nested changes
         for (Map.Entry<Trackable, Set<String>> dirtyNested : aggregate.getNestedChangedProperties().entrySet()) {
             AggregateChild dirtyEntity = (AggregateChild) dirtyNested.getKey();
             Set<String> dirtyProps = dirtyNested.getValue();
