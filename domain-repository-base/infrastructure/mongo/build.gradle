@@ -1,33 +1,14 @@
 plugins {
-    id 'java-library'
-    id 'io.spring.dependency-management'
     id 'maven-publish'
 }
 
-dependencyManagement {
-    imports {
-        mavenBom "org.springframework.boot:spring-boot-dependencies:3.5.3"
-    }
-}
-
-group = 'com.github.minhhien-e.domain-repository-base'
-version = '1.0.0'
-
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(17)
-    }
-    withSourcesJar()
-}
-repositories {
-    mavenCentral()
-}
 dependencies {
     api project(":domain")
-    implementation ("org.springframework.boot:spring-boot-starter-data-mongodb")
-    compileOnly "org.projectlombok:lombok"
-    annotationProcessor "org.projectlombok:lombok"
+    implementation(libs.spring.boot.starter.data.mongodb)
+    compileOnly(libs.lombok)
+    annotationProcessor(libs.lombok)
 }
+
 publishing {
     publications {
         create("mavenJava", MavenPublication) {
@@ -36,5 +17,3 @@ publishing {
         }
     }
 }
-
-

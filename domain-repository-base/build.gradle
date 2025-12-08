@@ -1,24 +1,35 @@
 plugins {
     id 'java'
-    id 'org.springframework.boot' version '3.5.3' apply(false)
-    id 'io.spring.dependency-management' version '1.1.7' apply(false)
+    alias(libs.plugins.spring.boot) apply false
+    alias(libs.plugins.spring.dependency.management) apply false
 }
+
 subprojects {
     apply plugin: 'java'
+    apply plugin: 'java-library'
+    apply plugin: 'io.spring.dependency-management'
+
+    group = 'com.github.minhhien-e.domain-repository-base'
+    version = '1.0.0'
+
     java {
         toolchain {
-            languageVersion = JavaLanguageVersion.of(17)
+            languageVersion = JavaLanguageVersion.of(libs.versions.java.get())
         }
+        withSourcesJar()
     }
+
     repositories {
         mavenCentral()
     }
+
     test {
         useJUnitPlatform()
     }
-    configurations {
-        compileOnly {
-            extendsFrom annotationProcessor
+
+    dependencyManagement {
+        imports {
+            mavenBom org.springframework.boot.gradle.plugin.SpringBootPlugin.BOM_COORDINATES
         }
     }
 }

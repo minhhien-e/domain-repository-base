@@ -1,0 +1,18 @@
+[versions]
+java = "17"
+springBoot = "3.5.3"
+springDependencyManagement = "1.1.7"
+lombok = "1.18.30" # Assumed latest stable, verifying... actually usually managed by spring boot but explicit is okay for annotation processor if needed, or rely on boot.
+# Spring Boot 3.x manages Lombok usually. Let's keep it explicit if needed or let BOM handle it.
+# Actually, the user had explicit compileOnly "org.projectlombok:lombok" without version in subproject, implying managed or inherited.
+# Wait, spring boot plugin was apply(false) in root.
+# Let's define versions that were visible.
+domainRepositoryBase = "1.0.0"
+
+[libraries]
+spring-boot-starter-data-mongodb = { module = "org.springframework.boot:spring-boot-starter-data-mongodb" }
+lombok = { module = "org.projectlombok:lombok" }
+
+[plugins]
+spring-boot = { id = "org.springframework.boot", version.ref = "springBoot" }
+spring-dependency-management = { id = "io.spring.dependency-management", version.ref = "springDependencyManagement" }
